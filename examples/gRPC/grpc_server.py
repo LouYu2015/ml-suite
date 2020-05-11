@@ -50,7 +50,7 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
         # Read output
         response = self.output_buffers[out_slot]
 
-        fcOutput = np.empty((self.args['batch_sz'], self.args['outsz'],),
+        fcOutput = np.empty((response["loss3_classifier/Reshape_output"].shape[1], 1000),
                                  dtype=np.float32, order='C')
         xdnn.computeFC(self.fcWeight, self.fcBias,
                        response["loss3_classifier/Reshape_output"], fcOutput)

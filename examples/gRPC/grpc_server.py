@@ -50,11 +50,11 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
         # Read output
         response = self.output_buffers[out_slot]
 
-        fcOutput = np.empty((response["loss3_classifier/Reshape_output"].shape[0], 2048),
+        fcOutput = np.empty((response["fc1000/Reshape_output"].shape[0], 2048),
                                  dtype=np.float32, order='C')
         xdnn.computeFC(self.fcWeight, self.fcBias,
-                       response["loss3_classifier/Reshape_output"], fcOutput)
-        response = request_wrapper.dictToProto({"loss3_classifier/Reshape_output": fcOutput})
+                       response["fc1000/Reshape_output"], fcOutput)
+        response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
         self.out_index += 1
         return response
 

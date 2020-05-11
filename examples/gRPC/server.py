@@ -22,7 +22,7 @@ N_STREAMS = 4
 
 
 # Start a gRPC server
-def start_grpc_server(port, fpgaRT, output_buffers, input_shapes):
+def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBias):
     print("Starting a gRPC server on port {port}".format(port=port))
     print("Using {n_stream} streams".format(n_stream=N_STREAMS))
 
@@ -31,7 +31,9 @@ def start_grpc_server(port, fpgaRT, output_buffers, input_shapes):
     servicer = grpc_server.InferenceServicer(fpgaRT=fpgaRT,
                                              output_buffers=output_buffers,
                                              n_streams=N_STREAMS,
-                                             input_shapes=input_shapes)
+                                             input_shapes=input_shapes,
+                                             fcWeight=fcWeight,
+                                             fcBias=fcBias)
     inference_server_pb2_grpc.add_InferenceServicer_to_server(servicer,
                                                               server)
 
@@ -94,13 +96,16 @@ def fpga_init():
                   for name, shape in zip(output_node_names, output_shapes)}
         output_buffers.append(buffer)
 
-    fpgaRT.exec_async({input_node_names[0]: np.zeros(input_shapes[0])},
-                      output_buffers[0], 0)
-    fpgaRT.get_result(0)
+    # fpgaRT.exec_async({input_node_names[0]: np.zeros(input_shapes[0])},
+    #                   output_buffers[0], 0)
+    # fpgaRT.get_result(0)
+    (fcWeight, fcBias) = xdnn_io.loadFCWeightsBias(args)
 
-    return fpgaRT, output_buffers, {name: shape for name, shape in zip(input_node_names, input_shapes)}
+    return fpgaRT, output_buffers,\
+        {name: shape for name, shape in zip(input_node_names, input_shapes)},\
+        fcWeight, fcBias
 
 
 if __name__ == '__main__':
-    fpgaRT, output_buffers, input_shapes = fpga_init()
+    fpgaRT, output_buffers, input_shapes, fcWeight, fcBias = fpga_init()
     start_grpc_server(port=PORT, fpgaRT=fpgaRT, output_buffers=output_buffers, input_shapes=input_shapes)

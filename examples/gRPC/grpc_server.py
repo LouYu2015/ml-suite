@@ -5,13 +5,15 @@ import inference_server_pb2_grpc
 import request_wrapper
 
 STACK_CHANNELS = True
+from xfdnn.rt import xdnn, xdnn_io
+import numpy as np
 
 
 class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
     '''
     This implements the inference service
     '''
-    def __init__(self, fpgaRT, output_buffers, n_streams, input_shapes):
+    def __init__(self, fpgaRT, output_buffers, n_streams, input_shapes, fcWeight, fcBias):
         '''
         fpgaRT: fpga runtime
         output_buffers: a list of map from node name to numpy array.
@@ -20,6 +22,7 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
         n_streams: number of concurrent async calls
         input_shapes: map from node name to numpy array shape
         '''
+        (self.fcWeight, self.fcBias) = (fcWeight, fcBias)
         self.fpgaRT = fpgaRT
         self.output_buffers = output_buffers
         self.n_streams = n_streams
@@ -46,7 +49,12 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
 
         # Read output
         response = self.output_buffers[out_slot]
-        response = request_wrapper.dictToProto(response)
+
+        fcOutput = np.empty((self.args['batch_sz'], self.args['outsz'],),
+                                 dtype=np.float32, order='C')
+        xdnn.computeFC(self.fcWeight, self.fcBias,
+                       response["loss3_classifier/Reshape_output"], fcOutput)
+        response = request_wrapper.dictToProto({"loss3_classifier/Reshape_output": fcOutput})
         self.out_index += 1
         return response
 

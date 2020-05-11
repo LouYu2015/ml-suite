@@ -123,7 +123,7 @@ def imagenet_client(file_name, n, print_interval=50):
             prediction = np.argmax(response[OUTPUT_NODE_NAME], axis=1)
             predictions.append(prediction)
     total_time = time.time() - start_time
-    print("{n} images in {time:.3} seconds ({speed:.3} images/s)"
+    print("{n} images in {time:.3f} seconds ({speed:.3f} images/s)"
           .format(n=n,
                   time=total_time,
                   speed=float(n) / total_time))

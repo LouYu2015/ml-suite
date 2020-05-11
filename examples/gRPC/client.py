@@ -16,7 +16,7 @@ SERVER_PORT = 5000
 
 # Number of dummy images to send
 N_DUMMY_IMAGES = 1000
-N_IMAGENET_IMAGES = 8
+N_IMAGENET_IMAGES = 496
 
 INPUT_NODE_NAME = "data"
 OUTPUT_NODE_NAME = "loss3_classifier/Reshape_output"
@@ -50,7 +50,7 @@ def imagenet_image_generator(file_name, n):
     from PIL import Image
     reader = csv.reader(open(os.path.expanduser(file_name), "r"), delimiter=" ")
     for i, row in enumerate(reader):
-        if i > n:
+        if i >= n:
             break
         image_path = row[0]
         file_name = os.path.expanduser(os.path.join(IMAGE_DIR, image_path))
@@ -97,7 +97,10 @@ def imagenet_request_generator(file_name, n):
 
 
 def imagenet_client(file_name, n, print_interval=50):
-    print("Sending Imagenet images...")
+    print("Sending {n} Imagenet images using batch size {batch_size}...".format(
+        n=n,
+        batch_size=BATCH_SIZE
+    ))
 
     assert(n % BATCH_SIZE == 0)
 
@@ -120,15 +123,17 @@ def imagenet_client(file_name, n, print_interval=50):
             prediction = np.argmax(response[OUTPUT_NODE_NAME], axis=1)
             predictions.append(prediction)
     total_time = time.time() - start_time
-    print("{n} images in {time:.3} seconds ({speed:.3} images per second)"
+    print("{n} images in {time:.3} seconds ({speed:.3} images/s)"
           .format(n=n,
                   time=total_time,
                   speed=float(n) / total_time))
     labels = list(imagenet_label_generator(file_name, n))
-    print(predictions)
-    print(labels)
+    # print(predictions)
+    # print(labels)
     predictions = np.array(predictions).reshape((-1))
     labels = np.array(labels).reshape((-1))
+    # print(predictions)
+    # print(labels)
     print("Accuracy: {acc:.4}".format(acc=metrics.accuracy_score(labels, predictions)))
 
 
@@ -157,7 +162,7 @@ def dummy_client(n, print_interval=50):
             # print(request_wrapper.protoToDict(response,
             #                                   {"loss3_classifier/Reshape_output": (1024)}))
     total_time = time.time() - start_time
-    print("{n} images in {time} seconds ({speed} images per second)"
+    print("{n} images in {time} seconds ({speed} images/s)"
           .format(n=n,
                   time=total_time,
                   speed=float(n) / total_time))

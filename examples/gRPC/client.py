@@ -105,6 +105,10 @@ def imagenet_client(file_name, n, print_interval=50):
     assert(n % BATCH_SIZE == 0)
 
     start_time = time.time()
+    requests = list(imagenet_request_generator(file_name, n))
+    total_time = time.time() - start_time
+    print("Image load time: {time:.2f}".format(time=total_time))
+    start_time = time.time()
     predictions = []
     # Connect to server
     with grpc.insecure_channel('{address}:{port}'.format(address=SERVER_ADDRESS,
@@ -112,7 +116,10 @@ def imagenet_client(file_name, n, print_interval=50):
         stub = inference_server_pb2_grpc.InferenceStub(channel)
 
         # Make a call
-        responses = stub.Inference(imagenet_request_generator(file_name, n))
+        def it():
+            for request in requests:
+                yield request
+        responses = stub.Inference(it())
 
         # Get responses
         for i, response in enumerate(responses):
@@ -123,7 +130,7 @@ def imagenet_client(file_name, n, print_interval=50):
             prediction = np.argmax(response[OUTPUT_NODE_NAME], axis=1)
             predictions.append(prediction)
     total_time = time.time() - start_time
-    print("{n} images in {time:.3f} seconds ({speed:.3f} images/s)"
+    print("Sent {n} images in {time:.3f} seconds ({speed:.3f} images/s), excluding image load time"
           .format(n=n,
                   time=total_time,
                   speed=float(n) / total_time))

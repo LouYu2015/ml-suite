@@ -4,7 +4,7 @@ import inference_server_pb2_grpc
 
 import request_wrapper
 
-STACK_CHANNELS = True
+STACK_CHANNELS = False
 from xfdnn.rt import xdnn, xdnn_io
 import numpy as np
 

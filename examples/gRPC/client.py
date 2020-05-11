@@ -19,7 +19,7 @@ N_DUMMY_IMAGES = 1000
 N_IMAGENET_IMAGES = 496
 
 INPUT_NODE_NAME = "data"
-OUTPUT_NODE_NAME = "loss3_classifier/Reshape_output"
+OUTPUT_NODE_NAME = "fc1000/Reshape_output"
 
 STACK = True
 BATCH_SIZE = 4

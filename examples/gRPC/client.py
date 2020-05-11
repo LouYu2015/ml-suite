@@ -60,7 +60,7 @@ def imagenet_image_generator(file_name, n):
         if len(image.shape) == 2:
             image = np.stack([image]*3, axis=2)
         image = image - np.array([104.007, 116.669, 122.679])
-        image = image / 255
+        # image = image/255
         image = np.transpose(image, (2, 0, 1))
         yield image
 
@@ -73,7 +73,7 @@ def imagenet_label_generator(file_name, n):
         if i >= n:
             break
         label = row[1]
-        yield label
+        yield int(label)
 
 
 def imagenet_request_generator(file_name, n):
@@ -116,7 +116,7 @@ def imagenet_client(file_name, n, print_interval=50):
             if i % print_interval == 0:
                 print(i)
             response = request_wrapper.protoToDict(response,
-                                              {OUTPUT_NODE_NAME: (BATCH_SIZE, 1024)})
+                                              {OUTPUT_NODE_NAME: (BATCH_SIZE, 1000)})
             prediction = np.argmax(response[OUTPUT_NODE_NAME], axis=1)
             predictions.append(prediction)
     total_time = time.time() - start_time

@@ -7,13 +7,64 @@ import request_wrapper
 STACK_CHANNELS = False
 from xfdnn.rt import xdnn, xdnn_io
 import numpy as np
+import multiprocessing as mp
+import Queue
+
+
+def fpga_worker(fpgaRT, output_buffers, input_shapes,
+                free_job_id_queue, occupied_job_id_queue, request_queue):
+    """
+    Puts request into FPGA
+    """
+    while True:
+        request, worker_id = request_queue.get()
+        job_id = free_job_id_queue.get()
+
+        # Convert input format
+        request = request_wrapper.protoToDict(request, input_shapes, stack=STACK_CHANNELS)
+
+        # Send to FPGA
+        fpgaRT.exec_async(request,
+                          output_buffers[job_id],
+                          job_id)
+
+        # Send to waiter
+        occupied_job_id_queue.put((job_id, worker_id))
+
+def fpga_waiter(fpgaRT, output_buffers, fcWeight, fcBias,
+                free_job_id_queue, occupied_job_id_queue, response_queues):
+    """
+    Wait for job to finish and distribute result to workers
+    """
+    while True:
+        job_id, worker_id = occupied_job_id_queue.get()
+
+        # Wait for FPGA to finish
+        fpgaRT.get_result(job_id)
+
+        # Read output
+        response = output_buffers[job_id]
+
+        # Compute fully connected layer
+        fcOutput = np.empty((response["fc1000/Reshape_output"].shape[0], 1000),
+                                 dtype=np.float32, order='C')
+        xdnn.computeFC(fcWeight, fcBias,
+                       response["fc1000/Reshape_output"], fcOutput)
+
+        # Send response
+        response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
+        response_queues[worker_id].put(response)
+
+        # Free job ID
+        free_job_id_queue.put(job_id)
 
 
 class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
     '''
     This implements the inference service
     '''
-    def __init__(self, fpgaRT, output_buffers, n_streams, input_shapes, fcWeight, fcBias, job_id_offsets):
+    def __init__(self, fpgaRT, output_buffers, n_streams, input_shapes,
+                 fcWeight, fcBias, n_workers):
         '''
         fpgaRT: fpga runtime
         output_buffers: a list of map from node name to numpy array.
@@ -21,55 +72,72 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
            The length should be equal to n_streams.
         n_streams: number of concurrent async calls
         input_shapes: map from node name to numpy array shape
+        fcWeight: final fully connected layer weights
+        fcBias: final fully connected layer bias
         '''
         (self.fcWeight, self.fcBias) = (fcWeight, fcBias)
         self.fpgaRT = fpgaRT
         self.output_buffers = output_buffers
         self.n_streams = n_streams
         self.input_shapes = input_shapes
-        self.job_id_offsets = job_id_offsets
 
-    def push(self, request, in_slot):
-        # Convert input format
-        request = request_wrapper.protoToDict(request, self.input_shapes, stack=STACK_CHANNELS)
+        # Queue of free job ID
+        free_job_id_queue = mp.Queue()
+        for job_id in range(self.n_streams):
+            free_job_id_queue.put(job_id)
 
-        # Send to FPGA
-        self.fpgaRT.exec_async(request,
-                               self.output_buffers[in_slot],
-                               in_slot)
+        # Queue of occupied job ID
+        occupied_job_id_queue = mp.Queue()
 
-    def pop(self, out_slot):
-        # Wait for finish signal
-        self.fpgaRT.get_result(out_slot)
+        # Queue of request
+        request_queue = mp.Queue(n_streams)
+        self.request_queue = request_queue
 
-        # Read output
-        response = self.output_buffers[out_slot]
+        # Queue of response for each worker
+        response_queues = [mp.Queue() for _ in range(n_workers)]
+        self.response_queues = response_queues
 
-        fcOutput = np.empty((response["fc1000/Reshape_output"].shape[0], 1000),
-                                 dtype=np.float32, order='C')
-        xdnn.computeFC(self.fcWeight, self.fcBias,
-                       response["fc1000/Reshape_output"], fcOutput)
-        response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
-        return response
+        # Queue of free worker ID
+        self.worker_id_queue = mp.Queue()
+        for worker_id in range(n_workers):
+            self.worker_id_queue.put(worker_id)
+
+        # Start worker
+        mp.Process(fpga_worker,
+                   args=(fpgaRT, output_buffers, input_shapes,
+                         free_job_id_queue, occupied_job_id_queue, request_queue)) \
+            .start()
+
+        # Start waiter
+        mp.Process(fpga_waiter,
+                   args=(fpgaRT, output_buffers, fcWeight, fcBias,
+                         free_job_id_queue, occupied_job_id_queue, response_queues)) \
+            .start()
 
     def Inference(self, request_iterator, context):
-        job_id_offset = self.job_id_offsets.get()
+        # Assign worker ID
+        worker_id = self.worker_id_queue.get()
         try:
-            in_slot = 0  # Next empty slot
-            out_slot = 0  # Next ready slot
+            n_response_waiting = 0  # Number of pending responses
             for request in request_iterator:
                 # Feed to FPGA
-                self.push(request, job_id_offset + in_slot % self.n_streams)
-                in_slot += 1
+                self.request_queue.put((request, worker_id))
+                n_response_waiting += 1
 
-                # Start to pull output when the queue is full
-                if in_slot - out_slot >= self.n_streams - 1:
-                    yield self.pop(job_id_offset + out_slot % self.n_streams)
-                    out_slot += 1
+                # Send response when ready
+                try:
+                    while True:
+                        response = self.response_queues[worker_id].get_nowait()
+                        yield response
+                        n_response_waiting -= 1
+                except Queue.Empty:
+                    pass
 
             # pull remaining output
-            while in_slot - out_slot > 0:
-                yield self.pop(job_id_offset + out_slot % self.n_streams)
-                out_slot += 1
+            while n_response_waiting > 0:
+                response = self.response_queues[worker_id].get()
+                yield response
+                n_response_waiting -= 1
         finally:
-            self.job_id_offsets.put(job_id_offset)
+            # Return worker ID
+            self.worker_id_queue.put(worker_id)

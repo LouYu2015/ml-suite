@@ -13,7 +13,7 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
     '''
     This implements the inference service
     '''
-    def __init__(self, fpgaRT, output_buffers, n_streams, input_shapes, fcWeight, fcBias):
+    def __init__(self, fpgaRT, output_buffers, n_streams, input_shapes, fcWeight, fcBias, job_id_offsets):
         '''
         fpgaRT: fpga runtime
         output_buffers: a list of map from node name to numpy array.
@@ -27,24 +27,19 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
         self.output_buffers = output_buffers
         self.n_streams = n_streams
         self.input_shapes = input_shapes
+        self.job_id_offsets = job_id_offsets
 
-        self.in_index = 0  # Index of next output buffer that is free
-        self.out_index = 0  # Index of output buffer next output buffer that is doing inference
-
-    def push(self, request):
+    def push(self, request, in_slot):
         # Convert input format
         request = request_wrapper.protoToDict(request, self.input_shapes, stack=STACK_CHANNELS)
 
         # Send to FPGA
-        in_slot = self.in_index % self.n_streams
         self.fpgaRT.exec_async(request,
                                self.output_buffers[in_slot],
                                in_slot)
-        self.in_index += 1
 
-    def pop(self):
+    def pop(self, out_slot):
         # Wait for finish signal
-        out_slot = self.out_index % self.n_streams
         self.fpgaRT.get_result(out_slot)
 
         # Read output
@@ -55,18 +50,26 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
         xdnn.computeFC(self.fcWeight, self.fcBias,
                        response["fc1000/Reshape_output"], fcOutput)
         response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
-        self.out_index += 1
         return response
 
     def Inference(self, request_iterator, context):
-        for request in request_iterator:
-            # Feed to FPGA
-            self.push(request)
+        job_id_offset = self.job_id_offsets.get()
+        try:
+            in_slot = 0  # Next empty slot
+            out_slot = 0  # Next ready slot
+            for request in request_iterator:
+                # Feed to FPGA
+                self.push(request, job_id_offset + in_slot % self.n_streams)
+                in_slot += 1
 
-            # Start to pull output when the queue is full
-            if self.in_index - self.out_index >= self.n_streams:
-                yield self.pop()
+                # Start to pull output when the queue is full
+                if in_slot - out_slot >= self.n_streams - 1:
+                    yield self.pop(job_id_offset + out_slot % self.n_streams)
+                    out_slot += 1
 
-        # pull remaining output
-        while self.in_index - self.out_index > 0:
-            yield self.pop()
+            # pull remaining output
+            while in_slot - out_slot > 0:
+                yield self.pop(job_id_offset + out_slot % self.n_streams)
+                out_slot += 1
+        finally:
+            self.job_id_offsets.put(job_id_offset)

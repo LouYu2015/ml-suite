@@ -26,6 +26,11 @@ def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBi
     print("Starting a gRPC server on port {port}".format(port=port))
     print("Using {n_stream} streams".format(n_stream=N_STREAMS))
 
+    # A queue of offsets to avoid conflicting job IDs
+    job_id_offsets = mp.Queue()
+    for i in range(GRPC_WORKER_COUNT):
+        job_id_offsets.put(i * N_STREAMS)
+
     # Configure server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=GRPC_WORKER_COUNT))
     servicer = grpc_server.InferenceServicer(fpgaRT=fpgaRT,
@@ -33,7 +38,8 @@ def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBi
                                              n_streams=N_STREAMS,
                                              input_shapes=input_shapes,
                                              fcWeight=fcWeight,
-                                             fcBias=fcBias)
+                                             fcBias=fcBias,
+                                             job_id_offsets=job_id_offsets)
     inference_server_pb2_grpc.add_InferenceServicer_to_server(servicer,
                                                               server)
 
@@ -91,7 +97,7 @@ def fpga_init():
     print("Ouput nodes:", output_node_names)
 
     output_buffers = []
-    for _ in range(N_STREAMS):
+    for _ in range(N_STREAMS * GRPC_WORKER_COUNT):
         buffer = {name: np.empty(shape=shape, dtype=np.float32)
                   for name, shape in zip(output_node_names, output_shapes)}
         output_buffers.append(buffer)

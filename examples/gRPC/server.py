@@ -24,7 +24,9 @@ N_STREAMS = 4
 # Start a gRPC server
 def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBias):
     print("Starting a gRPC server on port {port}".format(port=port))
-    print("Using {n_stream} streams".format(n_stream=N_STREAMS))
+    print("Using {n_worker} workers ({n_stream} streams/worker)"
+          .format(n_stream=N_STREAMS,
+                  n_worker=GRPC_WORKER_COUNT))
 
     # A queue of offsets to avoid conflicting job IDs
     job_id_offsets = mp.Queue()

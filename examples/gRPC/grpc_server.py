@@ -103,13 +103,13 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
             self.worker_id_queue.put(worker_id)
 
         # Start worker
-        mp.Process(fpga_worker,
+        mp.Process(target=fpga_worker,
                    args=(fpgaRT, output_buffers, input_shapes,
                          free_job_id_queue, occupied_job_id_queue, request_queue)) \
             .start()
 
         # Start waiter
-        mp.Process(fpga_waiter,
+        mp.Process(target=fpga_waiter,
                    args=(fpgaRT, output_buffers, fcWeight, fcBias,
                          free_job_id_queue, occupied_job_id_queue, response_queues)) \
             .start()

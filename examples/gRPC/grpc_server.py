@@ -18,7 +18,9 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
     """
     while True:
         request, worker_id = request_queue.get()
+        print("Request from", worker_id)
         job_id = free_job_id_queue.get()
+        print("Assign job ID", job_id)
 
         # Convert input format
         request = request_wrapper.protoToDict(request, input_shapes, stack=STACK_CHANNELS)
@@ -38,6 +40,7 @@ def fpga_waiter(fpgaRT, output_buffers, fcWeight, fcBias,
     """
     while True:
         job_id, worker_id = occupied_job_id_queue.get()
+        print("Wait for {job} from worker {worker}".format(job=job_id, worker=worker_id))
 
         # Wait for FPGA to finish
         fpgaRT.get_result(job_id)
@@ -53,6 +56,7 @@ def fpga_waiter(fpgaRT, output_buffers, fcWeight, fcBias,
 
         # Send response
         response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
+        print("Give response to", worker_id)
         response_queues[worker_id].put(response)
 
         # Free job ID
@@ -117,10 +121,12 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
     def Inference(self, request_iterator, context):
         # Assign worker ID
         worker_id = self.worker_id_queue.get()
+        print("Worker", worker_id, "started")
         try:
             n_response_waiting = 0  # Number of pending responses
             for request in request_iterator:
                 # Feed to FPGA
+                print("Put request")
                 self.request_queue.put((request, worker_id))
                 n_response_waiting += 1
 
@@ -129,8 +135,10 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
                     while True:
                         response = self.response_queues[worker_id].get_nowait()
                         yield response
+                        print("Sent response")
                         n_response_waiting -= 1
                 except Queue.Empty:
+                    print("Queue empty")
                     pass
 
             # pull remaining output

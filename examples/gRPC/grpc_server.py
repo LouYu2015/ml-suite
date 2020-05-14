@@ -26,11 +26,13 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
         request = request_wrapper.protoToDict(request, input_shapes, stack=STACK_CHANNELS)
 
         # Send to FPGA
+        print("Execute job", job_id)
         fpgaRT.exec_async(request,
                           output_buffers[job_id],
                           job_id)
 
         # Send to waiter
+        print("Sent job", job_id,"to waiter")
         occupied_job_id_queue.put((job_id, worker_id))
 
 def fpga_waiter(fpgaRT, output_buffers, fcWeight, fcBias,

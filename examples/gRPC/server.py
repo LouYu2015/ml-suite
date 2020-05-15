@@ -106,7 +106,7 @@ def fpga_init():
     print("Input nodes:", input_node_names)
     print("Ouput shapes:", output_shapes)
     print("Ouput nodes:", output_node_names)
-    print("Using {path}", args["netcfg"])
+    print("Using model {path}".format(path=args["netcfg"]))
 
     output_buffers = []
     for _ in range(N_STREAMS):

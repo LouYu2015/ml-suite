@@ -127,6 +127,6 @@ def fpga_init():
 if __name__ == '__main__':
     fpgaRT, output_buffers, output_node_name,\
         input_shapes, fcWeight, fcBias = fpga_init()
-    start_grpc_server(port=PORT, fpgaRT=fpgaRT,
+    start_grpc_server(port=PORT, fpgaRT=fpgaRT, output_node_name=output_node_name,
                       output_buffers=output_buffers, input_shapes=input_shapes,
                       fcWeight=fcWeight, fcBias=fcBias)

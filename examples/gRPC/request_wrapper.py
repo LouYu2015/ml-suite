@@ -23,7 +23,10 @@ def protoToDict(listOfArrays, input_shapes, stack=False):
                     data += arr.raw_data[i*channel_size:(i+1)*channel_size]
             data = np.frombuffer(data, dtype=np.float32).reshape(input_shapes[name])
         else:
-            data = np.frombuffer(arr.raw_data, dtype=np.float32).reshape(input_shapes[name])
+            try:
+                data = np.frombuffer(arr.raw_data, dtype=np.float32).reshape(input_shapes[name])
+            except KeyError:
+                raise Exception("{name} is not a valid node name".format(name=name))
 
         result[name] = data
     return result

@@ -31,7 +31,9 @@ def start_grpc_server(port, fpgaRT,
     print("Using {workers} workers".format(workers=GRPC_WORKER_COUNT))
 
     # Configure server
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=GRPC_WORKER_COUNT))
+    executor = futures.ThreadPoolExecutor(max_workers=GRPC_WORKER_COUNT)
+    executor.shutdown = lambda wait: None
+    server = grpc.server(executor)
     servicer = grpc_server.InferenceServicer(fpgaRT=fpgaRT,
                                              output_buffers=output_buffers,
                                              n_streams=N_STREAMS,
@@ -49,8 +51,16 @@ def start_grpc_server(port, fpgaRT,
     # Start
     server.start()
     print("Server initialized")
-    server.wait_for_termination()
-
+    try:
+        server.wait_for_termination()
+    except KeyboardInterrupt:
+        # Try to stop all threads
+        print("Exiting due to keyboard interrupt")
+        import atexit
+        import concurrent
+        import sys
+        atexit._exithandlers.remove(concurrent.futures.thread._python_exit)
+        sys.exit()
 
 def process_inference(request):
     input_dict = request_wrapper.protoToDict(request)

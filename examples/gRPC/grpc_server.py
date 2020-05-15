@@ -17,53 +17,60 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
     """
     Puts request into FPGA
     """
-    while True:
-        request, worker_id = request_queue.get()
-        print("Request from", worker_id)
-        job_id = free_job_id_queue.get()
-        print("Assign job ID", job_id)
+    try:
+        while True:
+            request, worker_id = request_queue.get()
+            job_id = free_job_id_queue.get()
 
-        # Convert input format
-        request = request_wrapper.protoToDict(request, input_shapes, stack=STACK_CHANNELS)
+            # Convert input format
+            request = request_wrapper.protoToDict(request, input_shapes, stack=STACK_CHANNELS)
 
-        # Send to FPGA
-        print("Execute job", job_id)
-        fpgaRT.exec_async(request,
-                          output_buffers[job_id],
-                          job_id)
+            # Send to FPGA
+            fpgaRT.exec_async(request,
+                              output_buffers[job_id],
+                              job_id)
 
-        # Send to waiter
-        print("Sent job", job_id,"to waiter")
-        occupied_job_id_queue.put((job_id, worker_id))
+            # Send to waiter
+            occupied_job_id_queue.put((job_id, worker_id))
+    except Exception as e:
+        import traceback
+        import sys
+        traceback.print_exc()
+        sys.exit()
+
 
 def fpga_waiter(fpgaRT, output_buffers, fcWeight, fcBias,
                 free_job_id_queue, occupied_job_id_queue, response_queues):
     """
     Wait for job to finish and distribute result to workers
     """
-    while True:
-        job_id, worker_id = occupied_job_id_queue.get()
-        print("Wait for {job} from worker {worker}".format(job=job_id, worker=worker_id))
+    try:
+        while True:
+            job_id, worker_id = occupied_job_id_queue.get()
 
-        # Wait for FPGA to finish
-        fpgaRT.get_result(job_id)
+            # Wait for FPGA to finish
+            fpgaRT.get_result(job_id)
 
-        # Read output
-        response = output_buffers[job_id]
+            # Read output
+            response = output_buffers[job_id]
 
-        # Compute fully connected layer
-        fcOutput = np.empty((response["fc1000/Reshape_output"].shape[0], 1000),
-                                 dtype=np.float32, order='C')
-        xdnn.computeFC(fcWeight, fcBias,
-                       response["fc1000/Reshape_output"], fcOutput)
+            # Compute fully connected layer
+            fcOutput = np.empty((response["fc1000/Reshape_output"].shape[0], 1000),
+                                     dtype=np.float32, order='C')
+            xdnn.computeFC(fcWeight, fcBias,
+                           response["fc1000/Reshape_output"], fcOutput)
 
-        # Send response
-        response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
-        print("Give response to", worker_id)
-        response_queues[worker_id].put(response)
+            # Send response
+            response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
+            response_queues[worker_id].put(response)
 
-        # Free job ID
-        free_job_id_queue.put(job_id)
+            # Free job ID
+            free_job_id_queue.put(job_id)
+    except Exception as e:
+        import traceback
+        import sys
+        traceback.print_exc()
+        sys.exit()
 
 
 class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
@@ -110,26 +117,26 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
             self.worker_id_queue.put(worker_id)
 
         # Start worker
-        threading.Thread(target=fpga_worker,
-                         args=(fpgaRT, output_buffers, input_shapes,
-                               free_job_id_queue, occupied_job_id_queue, request_queue)) \
-            .start()
+        t = threading.Thread(target=fpga_worker,
+                             args=(fpgaRT, output_buffers, input_shapes,
+                                   free_job_id_queue, occupied_job_id_queue, request_queue))
+        t.daemon = True
+        t.start()
 
         # Start waiter
-        threading.Thread(target=fpga_waiter,
-                         args=(fpgaRT, output_buffers, fcWeight, fcBias,
-                               free_job_id_queue, occupied_job_id_queue, response_queues)) \
-            .start()
+        t = threading.Thread(target=fpga_waiter,
+                             args=(fpgaRT, output_buffers, fcWeight, fcBias,
+                                   free_job_id_queue, occupied_job_id_queue, response_queues))
+        t.daemon = True
+        t.start()
 
     def Inference(self, request_iterator, context):
         # Assign worker ID
         worker_id = self.worker_id_queue.get()
-        print("Worker", worker_id, "started")
         try:
             n_response_waiting = 0  # Number of pending responses
             for request in request_iterator:
                 # Feed to FPGA
-                print("Put request")
                 self.request_queue.put((request, worker_id))
                 n_response_waiting += 1
 
@@ -138,10 +145,8 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
                     while True:
                         response = self.response_queues[worker_id].get_nowait()
                         yield response
-                        print("Sent response")
                         n_response_waiting -= 1
                 except Queue.Empty:
-                    print("Queue empty")
                     pass
 
             # pull remaining output

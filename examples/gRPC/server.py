@@ -59,7 +59,7 @@ def start_grpc_server(port, fpgaRT,
         import atexit
         import concurrent
         import sys
-        atexit._exithandlers.remove(concurrent.futures.thread._python_exit)
+        filter(lambda x: x[0] != concurrent.futures.thread._python_exit, atexit._exithandlers)
         sys.exit()
 
 def process_inference(request):

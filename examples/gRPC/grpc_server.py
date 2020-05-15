@@ -39,7 +39,7 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
         sys.exit()
 
 
-def fpga_waiter(fpgaRT, output_buffers, fcWeight, fcBias,
+def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
                 free_job_id_queue, occupied_job_id_queue, response_queues):
     """
     Wait for job to finish and distribute result to workers
@@ -55,13 +55,13 @@ def fpga_waiter(fpgaRT, output_buffers, fcWeight, fcBias,
             response = output_buffers[job_id]
 
             # Compute fully connected layer
-            fcOutput = np.empty((response["fc1000/Reshape_output"].shape[0], 1000),
+            fcOutput = np.empty((response[output_node_name].shape[0], 1000),
                                      dtype=np.float32, order='C')
             xdnn.computeFC(fcWeight, fcBias,
-                           response["fc1000/Reshape_output"], fcOutput)
+                           response[output_node_name], fcOutput)
 
             # Send response
-            response = request_wrapper.dictToProto({"fc1000/Reshape_output": fcOutput})
+            response = request_wrapper.dictToProto({output_node_name: fcOutput})
             response_queues[worker_id].put(response)
 
             # Free job ID
@@ -77,7 +77,7 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
     '''
     This implements the inference service
     '''
-    def __init__(self, fpgaRT, output_buffers, n_streams, input_shapes,
+    def __init__(self, fpgaRT, output_buffers, output_node_name, n_streams, input_shapes,
                  fcWeight, fcBias, n_workers):
         '''
         fpgaRT: fpga runtime
@@ -125,7 +125,7 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
 
         # Start waiter
         t = threading.Thread(target=fpga_waiter,
-                             args=(fpgaRT, output_buffers, fcWeight, fcBias,
+                             args=(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
                                    free_job_id_queue, occupied_job_id_queue, response_queues))
         t.daemon = True
         t.start()

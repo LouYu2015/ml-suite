@@ -22,7 +22,9 @@ N_STREAMS = 16
 
 
 # Start a gRPC server
-def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBias):
+def start_grpc_server(port, fpgaRT,
+                      output_buffers, input_shapes, output_node_name,
+                      fcWeight, fcBias):
     print("Starting a gRPC server on port {port}".format(port=port))
     print("Using {n_stream} streams"
           .format(n_stream=N_STREAMS))
@@ -33,6 +35,7 @@ def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBi
     servicer = grpc_server.InferenceServicer(fpgaRT=fpgaRT,
                                              output_buffers=output_buffers,
                                              n_streams=N_STREAMS,
+                                             output_node_name=output_node_name,
                                              input_shapes=input_shapes,
                                              fcWeight=fcWeight,
                                              fcBias=fcBias,
@@ -93,6 +96,7 @@ def fpga_init():
     print("Input nodes:", input_node_names)
     print("Ouput shapes:", output_shapes)
     print("Ouput nodes:", output_node_names)
+    print("Using {path}", args["netcfg"])
 
     output_buffers = []
     for _ in range(N_STREAMS):
@@ -105,13 +109,14 @@ def fpga_init():
     # fpgaRT.get_result(0)
     (fcWeight, fcBias) = xdnn_io.loadFCWeightsBias(args)
 
-    return fpgaRT, output_buffers,\
+    return fpgaRT, output_buffers, output_node_names[0],\
         {name: shape for name, shape in zip(input_node_names, input_shapes)},\
         fcWeight, fcBias
 
 
 if __name__ == '__main__':
-    fpgaRT, output_buffers, input_shapes, fcWeight, fcBias = fpga_init()
+    fpgaRT, output_buffers, output_node_name,\
+        input_shapes, fcWeight, fcBias = fpga_init()
     start_grpc_server(port=PORT, fpgaRT=fpgaRT,
                       output_buffers=output_buffers, input_shapes=input_shapes,
                       fcWeight=fcWeight, fcBias=fcBias)

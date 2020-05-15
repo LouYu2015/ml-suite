@@ -26,6 +26,7 @@ def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBi
     print("Starting a gRPC server on port {port}".format(port=port))
     print("Using {n_stream} streams"
           .format(n_stream=N_STREAMS))
+    print("Using {workers} workers".format(workers=GRPC_WORKER_COUNT))
 
     # Configure server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=GRPC_WORKER_COUNT))
@@ -44,6 +45,7 @@ def start_grpc_server(port, fpgaRT, output_buffers, input_shapes, fcWeight, fcBi
 
     # Start
     server.start()
+    print("Server initialized")
     server.wait_for_termination()
 
 

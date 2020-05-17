@@ -59,8 +59,8 @@ def dummy_client(n, print_interval=50):
         stub = inference_server_pb2_grpc.InferenceStub(channel)
 
         # Make a call
-        for i in range(n):
-            responses = stub.Inference(empty_image_generator(1))
+        for i in range(n // BATCH_SIZE):
+            responses = stub.Inference(empty_image_generator(BATCH_SIZE))
             responses = list(responses)
     total_time = time.time() - start_time
     print("{n} images in {time} seconds ({speed} images/s)"

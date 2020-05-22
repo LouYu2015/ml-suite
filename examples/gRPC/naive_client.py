@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import protos.grpc_service_pb2 as grpc_service_pb2
+import protos.grpc_service_pb2_grpc as grpc_service_pb2_grpc
 
 import request_wrapper
 
@@ -52,7 +53,7 @@ def dummy_client(n, print_interval=50):
     # Connect to server
     with grpc.insecure_channel('{address}:{port}'.format(address=SERVER_ADDRESS,
                                                          port=SERVER_PORT)) as channel:
-        stub = grpc_service_pb2.GRPCServiceStub(channel)
+        stub = grpc_service_pb2_grpc.GRPCServiceStub(channel)
 
         # Make a call
         for i in range(n // BATCH_SIZE):

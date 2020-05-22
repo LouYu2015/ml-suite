@@ -150,12 +150,12 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
 
         input = model_status["resnet50_netdef"].input.add()
         input.name = "input"
-        input.data_type = model_config_pb2.DataType.TYPE_FP32
+        input.data_type = model_config_pb2.TYPE_FP32
         input.dims.extend(3*224*224)
 
         output = model_status["resnet50_netdef"].input.add()
         output.name = "output/BiasAdd"
-        output.data_type = model_config_pb2.DataType.TYPE_FP32
+        output.data_type = model_config_pb2.TYPE_FP32
         output.dims.extend(1000)
 
         request_status = request_status_pb2.RequestStatus(code=request_status_pb2.RequestStatusCode.SUCCESS)
@@ -178,7 +178,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
 
         # Construct response
         request_status = request_status_pb2.RequestStatus(
-            code=request_status_pb2.RequestStatusCode.SUCCESS,
+            code=request_status_pb2.SUCCESS,
             server_id="inference:0")
         reply = grpc_service_pb2.InferResponse(request_status=request_status)
         reply.meta_data.id = request_id
@@ -187,7 +187,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
 
         output = reply.meta_data.output.add()
         output.name = "output/BiasAdd"
-        output.data_type = model_config_pb2.DataType.TYPE_FP32
+        output.data_type = model_config_pb2.TYPE_FP32
         output.raw.dims.extend(1000)
         reply.raw_output.extend(fcOutput.tobytes())
         return reply

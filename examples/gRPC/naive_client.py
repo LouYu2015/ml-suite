@@ -35,7 +35,7 @@ def empty_image_generator(n):
     '''
     for _ in range(n // BATCH_SIZE):
         request = grpc_service_pb2.InferRequest()
-        request.raw_input.extend(np.zeros((BATCH_SIZE), dtype=np.float32).tobytes())
+        request.raw_input.append(np.zeros((BATCH_SIZE, 3, 224, 224), dtype=np.float32).tobytes())
         yield request
 
 

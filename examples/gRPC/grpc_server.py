@@ -26,8 +26,10 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
             request, worker_id = request_queue.get()
             job_id = free_job_id_queue.get()
 
+            input_buffer = {list(input_shapes.keys())[0]: request}
+
             # Send to FPGA
-            fpgaRT.exec_async(request,
+            fpgaRT.exec_async(input_buffer,
                               output_buffers[job_id],
                               job_id)
 

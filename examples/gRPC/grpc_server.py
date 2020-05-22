@@ -188,6 +188,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
 
         output = reply.meta_data.output.add()
         output.name = "output/BiasAdd"
+        output.raw.dims.append(4)
         output.raw.dims.append(1000)
         print(len(fcOutput))
         reply.raw_output.append(fcOutput)

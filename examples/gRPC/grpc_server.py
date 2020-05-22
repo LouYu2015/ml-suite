@@ -158,7 +158,8 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         output.data_type = model_config_pb2.TYPE_FP32
         output.dims.append(1000)
 
-        request_status = request_status_pb2.RequestStatus(code=request_status_pb2.RequestStatusCode.SUCCESS)
+        request_status = request_status_pb2.RequestStatus(
+            code=request_status_pb2.SUCCESS)
 
         return grpc_service_pb2.StatusResponse(server_status=server_status,
                                                request_status=request_status)

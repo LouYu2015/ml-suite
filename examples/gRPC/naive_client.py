@@ -55,6 +55,8 @@ def dummy_client(n, print_interval=50):
                                                          port=SERVER_PORT)) as channel:
         stub = grpc_service_pb2_grpc.GRPCServiceStub(channel)
 
+        stub.Status(grpc_service_pb2.StatusRequest())
+
         # Make a call
         for i in range(n // BATCH_SIZE):
             responses = stub.Infer(list(empty_image_generator(BATCH_SIZE))[0])

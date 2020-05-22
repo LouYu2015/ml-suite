@@ -24,7 +24,6 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
     try:
         while True:
             request, worker_id, request_id = request_queue.get()
-            print("Request from", worker_id)
             job_id = free_job_id_queue.get()
 
             # Convert input format
@@ -33,12 +32,10 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
 
             input_buffer = {list(input_shapes.keys())[0]: array}
 
-            print(worker_id, "exec")
             # Send to FPGA
             fpgaRT.exec_async(input_buffer,
                               output_buffers[job_id],
                               job_id)
-            print(worker_id, "after exec")
 
             # Send to waiter
             occupied_job_id_queue.put((job_id, worker_id, request_id))
@@ -72,6 +69,7 @@ def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
             xdnn.computeFC(fcWeight, fcBias,
                            response[output_node_name], fcOutput)
 
+            # Give response to worker
             response_queues[worker_id].put((fcOutput.tobytes(), request_id))
 
             # Free job ID
@@ -142,17 +140,20 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         t.start()
 
     def Status(self, request, context):
+        # Model status
         server_status = server_status_pb2.ServerStatus()
         server_status.id = "inference:0"
         config = server_status.model_status["resnet50_netdef"].config
         config.max_batch_size = 16
         config.name = "resnet50_netdef"
 
+        # Input
         input = config.input.add()
         input.name = "input"
         input.data_type = model_config_pb2.TYPE_FP32
         input.dims.append(3*224*224)
 
+        # Output
         output = config.output.add()
         output.name = "output/BiasAdd"
         output.data_type = model_config_pb2.TYPE_FP32
@@ -165,14 +166,14 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         return grpc_service_pb2.StatusResponse(server_status=server_status,
                                                request_status=request_status)
 
-    # def Health(self, request, context):
-    #     return grpc_service_pb2.HealthResponse()
-
     def Infer(self, request, context):
         responses = list(self.StreamInfer([request], context))
         return responses[0]
 
     def pull_response(self, worker_id, wait=True):
+        """
+        Pull a response for worker
+        """
         if wait:
             fcOutput, request_id = self.response_queues[worker_id].get()
         else:
@@ -187,13 +188,14 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         reply.meta_data.model_version = -1
         reply.meta_data.batch_size = self.batch_size
 
+        # Construct output
         output = reply.meta_data.output.add()
         output.name = "output/BiasAdd"
         output.raw.dims.append(self.batch_size)
         output.raw.dims.append(1000)
         output.raw.batch_byte_size = 1000*self.batch_size*4
-        print(len(fcOutput))
         reply.raw_output.append(fcOutput)
+
         return reply
 
     def StreamInfer(self, request_iterator, context):
@@ -221,12 +223,3 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         finally:
             # Return worker ID
             self.worker_id_queue.put(worker_id)
-    #
-    # def ModelControl(self, request, context):
-    #     pass
-    #
-    # def SharedMemoryControl(self, request, context):
-    #     pass
-    #
-    # def Repository(self, request, context):
-    #     pass

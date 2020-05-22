@@ -17,7 +17,7 @@ PORT = 5000
 # Number of workers for gRPC server
 GRPC_WORKER_COUNT = mp.cpu_count()
 # Number of concurrent async calls to FPGA
-N_STREAMS = 16
+N_STREAMS = 4
 
 
 # Start a gRPC server

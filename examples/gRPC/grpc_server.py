@@ -24,14 +24,17 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
     try:
         while True:
             request, worker_id = request_queue.get()
+            print("Request from", worker_id)
             job_id = free_job_id_queue.get()
 
             input_buffer = {list(input_shapes.keys())[0]: request}
 
+            print(worker_id, "exec")
             # Send to FPGA
             fpgaRT.exec_async(input_buffer,
                               output_buffers[job_id],
                               job_id)
+            print(worker_id, "after exec")
 
             # Send to waiter
             occupied_job_id_queue.put((job_id, worker_id, request.meta_data.id))
@@ -50,9 +53,11 @@ def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
     try:
         while True:
             job_id, worker_id, request_id = occupied_job_id_queue.get()
+            print("Waiting for", worker_id, job_id)
 
             # Wait for FPGA to finish
             fpgaRT.get_result(job_id)
+            print(worker_id, job_id, "got result")
 
             # Read output
             response = output_buffers[job_id]

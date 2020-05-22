@@ -72,7 +72,7 @@ def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
             xdnn.computeFC(fcWeight, fcBias,
                            response[output_node_name], fcOutput)
 
-            response_queues[worker_id].put((fcOutput, request_id))
+            response_queues[worker_id].put((fcOutput.tobytes(), request_id))
 
             # Free job ID
             free_job_id_queue.put(job_id)
@@ -189,7 +189,8 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         output = reply.meta_data.output.add()
         output.name = "output/BiasAdd"
         output.raw.dims.append(1000)
-        reply.raw_output.append(fcOutput.tobytes())
+        print(len(fcOutput))
+        reply.raw_output.append(fcOutput)
         return reply
 
     def StreamInfer(self, request_iterator, context):

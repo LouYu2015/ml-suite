@@ -8,8 +8,7 @@ from xfdnn.rt import xdnn, xdnn_io
 import grpc
 import numpy as np
 
-import inference_server_pb2_grpc
-
+import protos.grpc_service_pb2_grpc as grpc_service_pb2_grpc
 import grpc_server
 import request_wrapper
 
@@ -42,7 +41,7 @@ def start_grpc_server(port, fpgaRT,
                                              fcWeight=fcWeight,
                                              fcBias=fcBias,
                                              n_workers=GRPC_WORKER_COUNT)
-    inference_server_pb2_grpc.add_InferenceServicer_to_server(servicer,
+    grpc_service_pb2_grpc.add_GRPCServiceServicer_to_server(servicer,
                                                               server)
 
     # Bind port

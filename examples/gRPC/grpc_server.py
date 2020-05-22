@@ -151,12 +151,12 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         input = model_status["resnet50_netdef"].input.add()
         input.name = "input"
         input.data_type = model_config_pb2.TYPE_FP32
-        input.dims.extend(3*224*224)
+        input.dims.append(3*224*224)
 
         output = model_status["resnet50_netdef"].input.add()
         output.name = "output/BiasAdd"
         output.data_type = model_config_pb2.TYPE_FP32
-        output.dims.extend(1000)
+        output.dims.append(1000)
 
         request_status = request_status_pb2.RequestStatus(code=request_status_pb2.RequestStatusCode.SUCCESS)
 
@@ -187,7 +187,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
 
         output = reply.meta_data.output.add()
         output.name = "output/BiasAdd"
-        output.raw.dims.extend(1000)
+        output.raw.dims.append(1000)
         reply.raw_output.append(fcOutput.tobytes())
         return reply
 

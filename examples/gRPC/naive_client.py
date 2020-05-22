@@ -52,12 +52,11 @@ def dummy_client(n, print_interval=50):
     # Connect to server
     with grpc.insecure_channel('{address}:{port}'.format(address=SERVER_ADDRESS,
                                                          port=SERVER_PORT)) as channel:
-        stub = inference_server_pb2_grpc.InferenceStub(channel)
+        stub = grpc_service_pb2.GRPCServiceStub(channel)
 
         # Make a call
         for i in range(n // BATCH_SIZE):
-            responses = stub.Inference(empty_image_generator(BATCH_SIZE))
-            responses = list(responses)
+            responses = stub.Infer(list(empty_image_generator(BATCH_SIZE))[0])
     total_time = time.time() - start_time
     print("{n} images in {time} seconds ({speed} images/s)"
           .format(n=n,

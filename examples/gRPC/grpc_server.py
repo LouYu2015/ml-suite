@@ -191,6 +191,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         output.name = "output/BiasAdd"
         output.raw.dims.append(self.batch_size)
         output.raw.dims.append(1000)
+        output.raw.batch_byte_size = 1000*self.batch_size*4
         print(len(fcOutput))
         reply.raw_output.append(fcOutput)
         return reply

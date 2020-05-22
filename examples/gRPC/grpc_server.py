@@ -144,7 +144,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
     def Status(self, request, context):
         server_status = server_status_pb2.ServerStatus()
         server_status.id = "inference:0"
-        config = server_status.model_status.model_status["resnet50_netdef"].config
+        config = server_status.model_status["resnet50_netdef"].config
         config.max_batch_size = 16
         config.name = "resnet50_netdef"
 

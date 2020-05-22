@@ -144,16 +144,16 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
     def Status(self, request, context):
         server_status = server_status_pb2.ServerStatus()
         server_status.id = "inference:0"
-        model_status = server_status.model_status
-        model_status["resnet50_netdef"].max_batch_size = 16
-        model_status["resnet50_netdef"].name = "resnet50_netdef"
+        config = server_status.model_status.model_status["resnet50_netdef"].config
+        config.max_batch_size = 16
+        config.name = "resnet50_netdef"
 
-        input = model_status["resnet50_netdef"].input.add()
+        input = config.input.add()
         input.name = "input"
         input.data_type = model_config_pb2.TYPE_FP32
         input.dims.append(3*224*224)
 
-        output = model_status["resnet50_netdef"].input.add()
+        output = config.output.add()
         output.name = "output/BiasAdd"
         output.data_type = model_config_pb2.TYPE_FP32
         output.dims.append(1000)

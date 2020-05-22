@@ -23,7 +23,7 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
     """
     try:
         while True:
-            request, worker_id = request_queue.get()
+            request, worker_id, request_id = request_queue.get()
             print("Request from", worker_id)
             job_id = free_job_id_queue.get()
 
@@ -41,7 +41,7 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
             print(worker_id, "after exec")
 
             # Send to waiter
-            occupied_job_id_queue.put((job_id, worker_id, request.meta_data.id))
+            occupied_job_id_queue.put((job_id, worker_id, request_id))
     except Exception as e:
         import traceback
         import sys
@@ -199,7 +199,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
             n_response_waiting = 0  # Number of pending responses
             for request in request_iterator:
                 # Feed to FPGA
-                self.request_queue.put((request.raw_input[0], worker_id))
+                self.request_queue.put((request.raw_input[0], worker_id, request.meta_data.id))
                 n_response_waiting += 1
 
                 # Send response when ready

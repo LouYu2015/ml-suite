@@ -156,6 +156,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         output = config.output.add()
         output.name = "output/BiasAdd"
         output.data_type = model_config_pb2.TYPE_FP32
+        output.dims.append()
         output.dims.append(1000)
 
         request_status = request_status_pb2.RequestStatus(
@@ -188,7 +189,7 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
 
         output = reply.meta_data.output.add()
         output.name = "output/BiasAdd"
-        output.raw.dims.append(4)
+        output.raw.dims.append(self.batch_size)
         output.raw.dims.append(1000)
         print(len(fcOutput))
         reply.raw_output.append(fcOutput)

@@ -27,7 +27,11 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
             print("Request from", worker_id)
             job_id = free_job_id_queue.get()
 
-            input_buffer = {list(input_shapes.keys())[0]: request}
+            # Convert input format
+            array = np.frombuffer(request, dtype=np.float32)
+            array = array.reshape(list(input_shapes.values())[0])
+
+            input_buffer = {list(input_shapes.keys())[0]: array}
 
             print(worker_id, "exec")
             # Send to FPGA
@@ -194,11 +198,8 @@ class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
         try:
             n_response_waiting = 0  # Number of pending responses
             for request in request_iterator:
-                # Convert input format
-                request = np.frombuffer(request.raw_input[0], dtype=np.float32)
-
                 # Feed to FPGA
-                self.request_queue.put((request, worker_id))
+                self.request_queue.put((request.raw_input[0], worker_id))
                 n_response_waiting += 1
 
                 # Send response when ready

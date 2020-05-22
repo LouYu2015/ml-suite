@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import inference_server_pb2_grpc
+import protos.grpc_service_pb2 as grpc_service_pb2
 
 import request_wrapper
 
@@ -19,7 +19,6 @@ N_DUMMY_IMAGES = 1000
 INPUT_NODE_NAME = "data"
 OUTPUT_NODE_NAME = "fc1000/Reshape_output"
 
-STACK = False
 BATCH_SIZE = 4
 
 IMAGE_LIST = "~/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt"
@@ -34,11 +33,8 @@ def empty_image_generator(n):
     n: number of images
     '''
     for _ in range(n // BATCH_SIZE):
-        if STACK:
-            request = {INPUT_NODE_NAME: np.zeros((BATCH_SIZE, 224, 224), dtype=np.float32)}
-        else:
-            request = {INPUT_NODE_NAME: np.zeros((BATCH_SIZE, 3, 224, 224), dtype=np.float32)}
-        request = request_wrapper.dictToProto(request)
+        request = grpc_service_pb2.InferRequest()
+        request.raw_input = np.zeros((BATCH_SIZE, 3, 224, 224)).tobytes()
         yield request
 
 

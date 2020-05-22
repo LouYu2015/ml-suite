@@ -1,6 +1,10 @@
 from __future__ import print_function
 
-import inference_server_pb2_grpc
+import protos.grpc_service_pb2_grpc
+import protos.grpc_service_pb2 as grpc_service_pb2
+import protos.server_status_pb2 as server_status_pb2
+import protos.request_status_pb2 as request_status_pb2
+import protos.model_config_pb2 as model_config_pb2
 
 import request_wrapper
 
@@ -23,7 +27,7 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
             job_id = free_job_id_queue.get()
 
             # Convert input format
-            request = request_wrapper.protoToDict(request, input_shapes, stack=STACK_CHANNELS)
+            request = np.frombuffer(request.raw_input[0], dtype=np.float32)
 
             # Send to FPGA
             fpgaRT.exec_async(request,
@@ -31,7 +35,7 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
                               job_id)
 
             # Send to waiter
-            occupied_job_id_queue.put((job_id, worker_id))
+            occupied_job_id_queue.put((job_id, worker_id, request))
     except Exception as e:
         import traceback
         import sys
@@ -46,7 +50,7 @@ def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
     """
     try:
         while True:
-            job_id, worker_id = occupied_job_id_queue.get()
+            job_id, worker_id, request = occupied_job_id_queue.get()
 
             # Wait for FPGA to finish
             fpgaRT.get_result(job_id)
@@ -60,9 +64,22 @@ def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
             xdnn.computeFC(fcWeight, fcBias,
                            response[output_node_name], fcOutput)
 
-            # Send response
-            response = request_wrapper.dictToProto({output_node_name: fcOutput})
-            response_queues[worker_id].put(response)
+            # Construct response
+            request_status = request_status_pb2.RequestStatus(
+                code=request_status_pb2.RequestStatusCode.SUCCESS,
+                server_id="inference:0")
+            reply = grpc_service_pb2.InferResponse()
+            reply.meta_data.id = request.meta_data.id
+            reply.meta_data.model_version = -1
+            reply.meta_data.batch_size = response[output_node_name].shape[0]
+
+            output = reply.meta_data.output.add()
+            output.name = "output/BiasAdd"
+            output.data_type = model_config_pb2.DataType.TYPE_FP32
+            output.raw.dims.extend(1000)
+            reply.raw_output.extend(fcOutput.tobytes())
+
+            response_queues[worker_id].put(reply)
 
             # Free job ID
             free_job_id_queue.put(job_id)
@@ -73,7 +90,7 @@ def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
         sys.exit()
 
 
-class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
+class InferenceServicer(protos.grpc_service_pb2_grpc.GRPCServiceServicer):
     '''
     This implements the inference service
     '''
@@ -130,7 +147,36 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
         t.daemon = True
         t.start()
 
-    def Inference(self, request_iterator, context):
+    def Status(self, request, context):
+        server_status = server_status_pb2.ServerStatus()
+        server_status.id = "inference:0"
+        model_status = server_status.model_status
+        model_status["resnet50_netdef"].max_batch_size = 16
+        model_status["resnet50_netdef"].name = "resnet50_netdef"
+
+        input = model_status["resnet50_netdef"].input.add()
+        input.name = "input"
+        input.data_type = model_config_pb2.DataType.TYPE_FP32
+        input.dims.extend(3*224*224)
+
+        output = model_status["resnet50_netdef"].input.add()
+        output.name = "output/BiasAdd"
+        output.data_type = model_config_pb2.DataType.TYPE_FP32
+        output.dims.extend(1000)
+
+        request_status = request_status_pb2.RequestStatus(code=request_status_pb2.RequestStatusCode.SUCCESS)
+
+        return grpc_service_pb2.StatusResponse(server_status=server_status,
+                                               request_status=request_status)
+
+    # def Health(self, request, context):
+    #     return grpc_service_pb2.HealthResponse()
+
+    def Infer(self, request, context):
+        responses = list(self.StreamInfer([request], context))
+        return responses[0]
+
+    def StreamInfer(self, request_iterator, context):
         # Assign worker ID
         worker_id = self.worker_id_queue.get()
         try:
@@ -157,3 +203,12 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServicer):
         finally:
             # Return worker ID
             self.worker_id_queue.put(worker_id)
+    #
+    # def ModelControl(self, request, context):
+    #     pass
+    #
+    # def SharedMemoryControl(self, request, context):
+    #     pass
+    #
+    # def Repository(self, request, context):
+    #     pass

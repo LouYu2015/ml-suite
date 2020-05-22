@@ -54,11 +54,9 @@ def fpga_waiter(fpgaRT, output_buffers, output_node_name, fcWeight, fcBias,
     try:
         while True:
             job_id, worker_id, request_id = occupied_job_id_queue.get()
-            print("Waiting for", worker_id, job_id)
 
             # Wait for FPGA to finish
             fpgaRT.get_result(job_id)
-            print(worker_id, job_id, "got result")
 
             # Read output
             response = output_buffers[job_id]

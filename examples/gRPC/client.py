@@ -16,18 +16,23 @@ SERVER_PORT = 5000
 
 # Number of dummy images to send
 N_DUMMY_IMAGES = 1000
-N_IMAGENET_IMAGES = 490
 
 INPUT_NODE_NAME = "data"
 OUTPUT_NODE_NAME = "fc1000/Reshape_output"
 
 STACK = True
-BATCH_SIZE = 10
 
 IMAGE_LIST = "~/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt"
 IMAGE_DIR = "~/CK-TOOLS/dataset-imagenet-ilsvrc2012-val-min"
 
+import argparse
+parser = argparse.ArgumentParser(description='Xilin ML Suit gRPC Client')
+parser.add_argument('--batchsize', type=int, help="Batch size", default=10)
+parser.add_argument('-n', type=int, help="Number of images", default=490)
+args = parser.parse_args()
 
+N_IMAGENET_IMAGES = args.n
+BATCH_SIZE = args.batchsize
 
 def empty_image_generator(n):
     '''

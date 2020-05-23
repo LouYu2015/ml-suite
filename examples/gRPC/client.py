@@ -9,10 +9,6 @@ import numpy as np
 from sklearn import metrics
 import time
 
-# gRPC server info
-
-SERVER_ADDRESS = "localhost"
-SERVER_PORT = 5000
 
 # Number of dummy images to send
 N_DUMMY_IMAGES = 1000
@@ -27,12 +23,19 @@ IMAGE_DIR = "~/CK-TOOLS/dataset-imagenet-ilsvrc2012-val-min"
 
 import argparse
 parser = argparse.ArgumentParser(description='Xilin ML Suit gRPC Client')
-parser.add_argument('--batchsize', type=int, help="Batch size", default=10)
+parser.add_argument('--batchsize', metavar="<batch size>", type=int,
+                    help="Batch size", default=10)
 parser.add_argument('-n', type=int, help="Number of images", default=490)
+parser.add_argument("--address", metavar="<address>", type=str,
+                    help="Server address", default="localhost")
+parser.add_argument("-p", metavar="<port>", type=int,
+                    help="Server port", default=5000)
 args = parser.parse_args()
 
 N_IMAGENET_IMAGES = args.n
 BATCH_SIZE = args.batchsize
+SERVER_ADDRESS = args.address
+SERVER_PORT = args.p
 
 def empty_image_generator(n):
     '''

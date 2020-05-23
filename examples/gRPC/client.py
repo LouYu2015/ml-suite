@@ -16,13 +16,13 @@ SERVER_PORT = 5000
 
 # Number of dummy images to send
 N_DUMMY_IMAGES = 1000
-N_IMAGENET_IMAGES = 496
+N_IMAGENET_IMAGES = 490
 
 INPUT_NODE_NAME = "data"
 OUTPUT_NODE_NAME = "fc1000/Reshape_output"
 
 STACK = True
-BATCH_SIZE = 4
+BATCH_SIZE = 10
 
 IMAGE_LIST = "~/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt"
 IMAGE_DIR = "~/CK-TOOLS/dataset-imagenet-ilsvrc2012-val-min"
@@ -112,7 +112,11 @@ def imagenet_client(file_name, n, print_interval=50):
     predictions = []
     # Connect to server
     with grpc.insecure_channel('{address}:{port}'.format(address=SERVER_ADDRESS,
-                                                         port=SERVER_PORT)) as channel:
+                                                         port=SERVER_PORT),
+                               options=[
+                                   ('grpc.max_send_message_length', 50 * 1024 * 1024),
+                                   ('grpc.max_receive_message_length', 50 * 1024 * 1024)]
+                               ) as channel:
         stub = inference_server_pb2_grpc.InferenceStub(channel)
 
         # Make a call

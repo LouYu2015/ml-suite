@@ -35,6 +35,7 @@ VERBOSE=0
 FRODO=0
 ZELDA=0
 PERPETUAL=0
+PORT=5000
 IMG_INPUT_SCALE=1.0
 # These variables are used in case there multiple FPGAs running in parallel
 NUMDEVICES=1
@@ -43,7 +44,7 @@ DEVICEID=0
 NUMPREPPROC=4
 COMPILEROPT="autoAllOpt.json"
 # Parse Options
-OPTS=`getopt -o p:t:m:k:b:d:s:a:n:ns:i:c:y:gvzfxh --long platform:,test:,model:,kcfg:,bitwidth:,directory:,numdevices:,numstreams:,deviceid:,batchsize:,compilerOpt:,numprepproc,checkaccuracy,verbose,zelda,frodo,perpetual,help -n "$0" -- "$@"`
+OPTS=`getopt -o p:t:m:k:b:d:s:a:n:ns:i:c:y:gvzfxh --long port:,platform:,test:,model:,kcfg:,bitwidth:,directory:,numdevices:,numstreams:,deviceid:,batchsize:,compilerOpt:,numprepproc,checkaccuracy,verbose,zelda,frodo,perpetual,help -n "$0" -- "$@"`
 
 if [ $? != 0 ] ; then echo "Failed parsing options." >&2 ; usage; exit 1 ; fi
 
@@ -51,6 +52,7 @@ while true
 do
   case "$1" in
     -p |--platform      ) MLSUITE_PLATFORM="$2" ; shift 2 ;;
+    --port ) PORT="$2"; shift 2;;
     -t |--test          ) TEST="$2"             ; shift 2 ;;
     -m |--model         ) MODEL="$2"            ; shift 2 ;;
     -k |--kcfg          ) KCFG="$2"             ; shift 2 ;;
@@ -181,6 +183,7 @@ fi
 ############################
 if [[ "$TEST" == "gRPC"* ]]; then
   BASEOPT+=" --images ."
+  BASEOPT+=" -p $PORT"
   BASEOPT+=" --device-ids "
   BASEOPT+="$DEVICEID"
 

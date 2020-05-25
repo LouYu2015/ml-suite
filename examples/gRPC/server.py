@@ -64,10 +64,13 @@ def start_grpc_server(port, fpgaRT,
 
 
 def fpga_init():
+    global PORT
     # Parse arguments
     parser = xdnn_io.default_parser_args()
     parser.add_argument('--device-ids', type=int, default=[0], nargs="+",
                         help='a list of device IDs for FPGA')
+    parser.add_argument('-p', type=int, default=5000,
+                        help='port')
     args = parser.parse_args()
     device_ids = args.device_ids
     args = xdnn_io.make_dict_args(args)

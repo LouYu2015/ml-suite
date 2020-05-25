@@ -6,8 +6,6 @@ import protos.server_status_pb2 as server_status_pb2
 import protos.request_status_pb2 as request_status_pb2
 import protos.model_config_pb2 as model_config_pb2
 
-import request_wrapper
-
 STACK_CHANNELS = False
 from xfdnn.rt import xdnn, xdnn_io
 import numpy as np

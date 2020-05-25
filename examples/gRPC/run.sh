@@ -183,7 +183,7 @@ fi
 ############################
 if [[ "$TEST" == "gRPC"* ]]; then
   BASEOPT+=" --images ."
-  BASEOPT+=" -p $PORT"
+  BASEOPT+=" --port $PORT"
   BASEOPT+=" --device-ids "
   BASEOPT+="$DEVICEID"
 

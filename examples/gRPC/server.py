@@ -70,8 +70,8 @@ def fpga_init():
     parser = xdnn_io.default_parser_args()
     parser.add_argument('--device-ids', type=int, default=[0], nargs="+",
                         help='a list of device IDs for FPGA')
-    parser.add_argument('-p', type=int, default=5000,
-                        help='port')
+    parser.add_argument('--port', type=int, default=5000,
+                        help='port to listen on')
     args = parser.parse_args()
     device_ids = args.device_ids
     PORT = args.port

@@ -3,8 +3,6 @@ from __future__ import print_function
 import protos.grpc_service_pb2 as grpc_service_pb2
 import protos.grpc_service_pb2_grpc as grpc_service_pb2_grpc
 
-import request_wrapper
-
 import grpc
 import numpy as np
 import time

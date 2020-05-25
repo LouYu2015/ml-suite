@@ -27,12 +27,14 @@ parser.add_argument("--address", metavar="<address>", type=str,
                     help="Server address", default="localhost")
 parser.add_argument("-p", metavar="<port>", type=int,
                     help="Server port", default=5000)
+parser.add_argument("--stream", default=False, action="store_true")
 args = parser.parse_args()
 
 N_IMAGENET_IMAGES = args.n
 BATCH_SIZE = args.batchsize
 SERVER_ADDRESS = args.address
 SERVER_PORT = args.p
+USE_STREAMING = args.stream
 
 
 
@@ -56,7 +58,7 @@ def dummy_client(n, print_interval=50):
     print_interval: print a number after this number of images is done
     '''
     print("Dummy client sending {n} images...".format(n=n))
-    print("gRPC streaming disabled, batch size {batch}".format(batch=BATCH_SIZE))
+    print("Batch size {batch}".format(batch=BATCH_SIZE))
 
     start_time = time.time()
     # Connect to server
@@ -67,8 +69,19 @@ def dummy_client(n, print_interval=50):
         stub.Status(grpc_service_pb2.StatusRequest())
 
         # Make a call
-        for i in range(n // BATCH_SIZE):
-            responses = stub.Infer(list(empty_image_generator(BATCH_SIZE))[0])
+        if USE_STREAMING:
+            # Streaming
+            print("Using streaming")
+            responses = stub.StreamInfer(empty_image_generator(n))
+
+            for i, responses in enumerate(responses):
+                if i % print_interval == 0:
+                    print(i)
+        else:
+            # Not streaming
+            print("Not using streaming")
+            for i in range(n // BATCH_SIZE):
+                responses = stub.Infer(list(empty_image_generator(BATCH_SIZE))[0])
     total_time = time.time() - start_time
     print("{n} images in {time} seconds ({speed} images/s)"
           .format(n=n,

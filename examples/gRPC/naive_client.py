@@ -8,8 +8,6 @@ import numpy as np
 import time
 
 # Number of dummy images to send
-N_DUMMY_IMAGES = 1000
-
 INPUT_NODE_NAME = "data"
 OUTPUT_NODE_NAME = "fc1000/Reshape_output"
 
@@ -30,7 +28,7 @@ parser.add_argument("-p", metavar="<port>", type=int,
 parser.add_argument("--stream", default=False, action="store_true")
 args = parser.parse_args()
 
-N_IMAGENET_IMAGES = args.n
+N_DUMMY_IMAGES = args.n
 BATCH_SIZE = args.batchsize
 SERVER_ADDRESS = args.address
 SERVER_PORT = args.p

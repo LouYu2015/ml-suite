@@ -10,7 +10,6 @@ import numpy as np
 
 import protos.grpc_service_pb2_grpc as grpc_service_pb2_grpc
 import grpc_server
-import request_wrapper
 
 # Port to listen on
 PORT = 5000

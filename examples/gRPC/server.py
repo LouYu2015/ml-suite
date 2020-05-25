@@ -32,7 +32,7 @@ def start_grpc_server(port, fpgaRT,
     executor = futures.ThreadPoolExecutor(max_workers=GRPC_WORKER_COUNT)
     executor.shutdown = lambda wait: None
     server = grpc.server(executor,
-                         options=(('grpc.max_message_length', 64*1024*1024),))
+                         options=(('grpc.max_receive_message_length', 64*1024*1024),))
     servicer = grpc_server.InferenceServicer(fpgaRT=fpgaRT,
                                              output_buffers=output_buffers,
                                              n_streams=N_STREAMS,

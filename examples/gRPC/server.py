@@ -61,14 +61,11 @@ def start_grpc_server(port, fpgaRT,
         filter(lambda x: x[0] != concurrent.futures.thread._python_exit, atexit._exithandlers)
         sys.exit()
 
-def process_inference(request):
-    input_dict = request_wrapper.protoToDict(request)
-
 
 def fpga_init():
     # Parse arguments
     parser = xdnn_io.default_parser_args()
-    parser.add_argument('--deviceID', type=str, default="0",
+    parser.add_argument('--device-ids', type=str, default="0",
                         help='a list of device IDs for FPGA')
     args = parser.parse_args()
     args = xdnn_io.make_dict_args(args)
@@ -96,7 +93,7 @@ def fpga_init():
 
     # Create runtime
     ret, handles = xdnn.createHandle(args['xclbin'], "kernelSxdnn_0",
-                                     [int(x) for x in args["deviceID"].split(" ")])
+                                     [int(x) for x in args["device-ids"].split(" ")])
     if ret != 0:
         raise Exception("Failed to create handle, return value: {error}".format(error=ret))
     fpgaRT = xdnn.XDNNFPGAOp(handles, args)
@@ -107,7 +104,7 @@ def fpga_init():
     print("Ouput shapes:", output_shapes)
     print("Ouput nodes:", output_node_names)
     print("Using model {path}".format(path=args["netcfg"]))
-    print("Using FPGA device:", [int(x) for x in args["deviceID"].split(" ")])
+    print("Using FPGA device:", [int(x) for x in args["device-ids"].split(" ")])
 
     output_buffers = []
     for _ in range(N_STREAMS):

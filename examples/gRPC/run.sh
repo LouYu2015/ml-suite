@@ -181,6 +181,8 @@ fi
 ############################
 if [[ "$TEST" == "gRPC"* ]]; then
   BASEOPT+=" --images ."
+  BASEOPT+=" --device-ids "
+  BASEOPT+="$DEVICEID"
 
   TEST=server.py
 fi

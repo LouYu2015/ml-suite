@@ -69,8 +69,8 @@ def process_inference(request):
 def fpga_init():
     # Parse arguments
     parser = xdnn_io.default_parser_args()
-    parser.add_argument('--deviceID', type=int, default=0,
-                        help='FPGA no. -> FPGA ID to run in case multiple FPGAs')
+    parser.add_argument('--deviceID', type=str, default="0",
+                        help='a list of device IDs for FPGA')
     args = parser.parse_args()
     args = xdnn_io.make_dict_args(args)
 
@@ -96,7 +96,8 @@ def fpga_init():
     num_outputs = len(output_shapes)
 
     # Create runtime
-    ret, handles = xdnn.createHandle(args['xclbin'], "kernelSxdnn_0", [args["deviceID"]])
+    ret, handles = xdnn.createHandle(args['xclbin'], "kernelSxdnn_0",
+                                     [int(x) for x in args["deviceID"].split(" ")])
     if ret != 0:
         raise Exception("Failed to create handle, return value: {error}".format(error=ret))
     fpgaRT = xdnn.XDNNFPGAOp(handles, args)
@@ -107,6 +108,7 @@ def fpga_init():
     print("Ouput shapes:", output_shapes)
     print("Ouput nodes:", output_node_names)
     print("Using model {path}".format(path=args["netcfg"]))
+    print("Using FPGA device:", [int(x) for x in args["deviceID"].split(" ")])
 
     output_buffers = []
     for _ in range(N_STREAMS):

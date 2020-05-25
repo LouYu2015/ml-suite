@@ -81,7 +81,7 @@ def dummy_client(n, print_interval=50):
             for i in range(n // BATCH_SIZE):
                 responses = stub.Infer(list(empty_image_generator(BATCH_SIZE))[0])
     total_time = time.time() - start_time
-    print("{n} images in {time} seconds ({speed} images/s)"
+    print("{n} images in {time:.1f} seconds ({speed:.1f} images/s)"
           .format(n=n,
                   time=total_time,
                   speed=float(n) / total_time))

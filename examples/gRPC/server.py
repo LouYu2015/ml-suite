@@ -68,6 +68,7 @@ def fpga_init():
     parser.add_argument('--device-ids', type=str, default="0",
                         help='a list of device IDs for FPGA')
     args = parser.parse_args()
+    device_ids = [int(x) for x in args.device_ids.split(" ")]
     args = xdnn_io.make_dict_args(args)
 
     # Create manager
@@ -92,8 +93,7 @@ def fpga_init():
     num_outputs = len(output_shapes)
 
     # Create runtime
-    ret, handles = xdnn.createHandle(args['xclbin'], "kernelSxdnn_0",
-                                     [int(x) for x in args["device-ids"].split(" ")])
+    ret, handles = xdnn.createHandle(args['xclbin'], "kernelSxdnn_0", device_ids)
     if ret != 0:
         raise Exception("Failed to create handle, return value: {error}".format(error=ret))
     fpgaRT = xdnn.XDNNFPGAOp(handles, args)
@@ -104,7 +104,7 @@ def fpga_init():
     print("Ouput shapes:", output_shapes)
     print("Ouput nodes:", output_node_names)
     print("Using model {path}".format(path=args["netcfg"]))
-    print("Using FPGA device:", [int(x) for x in args["device-ids"].split(" ")])
+    print("Using FPGA device:", device_ids)
 
     output_buffers = []
     for _ in range(N_STREAMS):

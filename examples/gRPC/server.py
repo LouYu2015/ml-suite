@@ -66,10 +66,10 @@ def start_grpc_server(port, fpgaRT,
 def fpga_init():
     # Parse arguments
     parser = xdnn_io.default_parser_args()
-    parser.add_argument('--device-ids', type=str, default="0",
+    parser.add_argument('--device-ids', type=int, default=[0], nargs="+",
                         help='a list of device IDs for FPGA')
     args = parser.parse_args()
-    device_ids = [int(x) for x in args.device_ids.split(" ")]
+    device_ids = args.device_ids
     args = xdnn_io.make_dict_args(args)
 
     # Create manager

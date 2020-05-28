@@ -51,7 +51,7 @@ class InferenceServicer(grpc_service_pb2_grpc.GRPCServiceServicer):
             return stub.Status(request)
 
     def Infer(self, request, context):
-        master = self.addresses[self.next_address % self.addresses(len)]
+        master = self.addresses[self.next_address % len(self.addresses)]
         self.next_address += 1
         if self.next_address > 1000000:
             self.next_address = 0

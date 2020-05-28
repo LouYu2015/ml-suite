@@ -26,7 +26,11 @@ def fpga_worker(fpgaRT, output_buffers, input_shapes,
 
             # Convert input format
             array = np.frombuffer(request, dtype=np.float32)
-            array = array.reshape(list(input_shapes.values())[0])
+            try:
+                array = array.reshape(list(input_shapes.values())[0])
+            except ValueError:
+                free_job_id_queue.put(job_id)
+                continue
 
             input_buffer = {list(input_shapes.keys())[0]: array}
 

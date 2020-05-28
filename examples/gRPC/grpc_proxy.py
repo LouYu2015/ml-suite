@@ -81,3 +81,13 @@ def main():
 
     # Bind port
     server.add_insecure_port('[::]:{port}'.format(port=PORT))
+
+    # Start
+    server.start()
+    print("Server initialized")
+    try:
+        server.wait_for_termination()
+    except KeyboardInterrupt:
+        # Try to stop all threads
+        print("Exiting due to keyboard interrupt")
+        exit(0)

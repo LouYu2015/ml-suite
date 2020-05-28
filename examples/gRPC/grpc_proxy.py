@@ -1,11 +1,13 @@
+from __future__ import print_function
+
 import protos.grpc_service_pb2_grpc as grpc_service_pb2_grpc
 import protos.server_status_pb2 as server_status_pb2
 import protos.model_config_pb2 as model_config_pb2
 import protos.request_status_pb2 as request_status_pb2
+
 import grpc
 import multiprocessing as mp
 from concurrent import futures
-
 import itertools
 
 ADDRESSES = ["127.0.0.1:{port}".format(port=port) for port in range(5001, 5008 + 1)]
@@ -71,6 +73,8 @@ class InferenceServicer(grpc_service_pb2_grpc.GRPCServiceServicer):
                 channel.close()
 
 def main():
+    print("Starting proxy on port", PORT)
+    print("Addresses:", ADDRESSES)
     executor = futures.ThreadPoolExecutor(max_workers=GRPC_WORKER_COUNT)
     executor.shutdown = lambda wait: None
     server = grpc.server(executor,

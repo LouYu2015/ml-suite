@@ -75,7 +75,7 @@ class InferenceServicer(grpc_service_pb2_grpc.GRPCServiceServicer):
 def main():
     print("Starting proxy on port", PORT)
     print("Addresses:", ADDRESSES)
-    executor = futures.ThreadPoolExecutor(max_workers=GRPC_WORKER_COUNT)
+    executor = futures.ThreadPoolExecutor(max_workers=64)
     executor.shutdown = lambda wait: None
     server = grpc.server(executor,
                          options=(('grpc.max_receive_message_length', 64*1024*1024),))

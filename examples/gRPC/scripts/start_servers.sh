@@ -1,5 +1,4 @@
 BATCH_SIZE=4
-cd ../
 ./run.sh -m resnet50 --batchsize $BATCH_SIZE --deviceid "0" --port 5001&
 ./run.sh -m resnet50 --batchsize $BATCH_SIZE --deviceid "1" --port 5002&
 ./run.sh -m resnet50 --batchsize $BATCH_SIZE --deviceid "2" --port 5003&

@@ -10,7 +10,7 @@ import multiprocessing as mp
 from concurrent import futures
 import itertools
 
-ADDRESSES = ["127.0.0.1:{port}".format(port=port) for port in range(5001, 5008 + 1)]
+ADDRESSES = ["127.0.0.1:{port}".format(port=port) for port in [5001, 5002]]
 PORT = 5000
 
 
@@ -95,3 +95,6 @@ def main():
         # Try to stop all threads
         print("Exiting due to keyboard interrupt")
         exit(0)
+
+
+main()

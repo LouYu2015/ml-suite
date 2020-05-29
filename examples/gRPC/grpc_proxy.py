@@ -13,13 +13,16 @@ import itertools
 import argparse
 parser = argparse.ArgumentParser(description='Xilin ML Suit gRPC Inference Proxy')
 parser.add_argument("--address", metavar="<address>", type=str,
-                    help="Server address", default="localhost")
-parser.add_argument("-p", metavar="<port>", type=int, default=[5000], nargs="+",
-                    help="Server ports")
+                    help="Server address to forward to", default="localhost")
+parser.add_argument("-p", "--ports", metavar="<port>", type=int, default=[5001], nargs="+",
+                    help="Server ports to forward to")
+parser.add_argument("-l", "--listen", metavar="<port>", type=int, default=5000,
+                    help="Server ports to listen on")
 args = parser.parse_args()
 
 ADDRESSES = ["{address}:{port}".format(port=port, address=args.address)
              for port in args.port]
+PORT = args.l
 
 
 def iterator_split(iterator, size):

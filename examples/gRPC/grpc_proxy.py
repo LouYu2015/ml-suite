@@ -67,7 +67,7 @@ class InferenceServicer(grpc_service_pb2_grpc.GRPCServiceServicer):
         try:
             results = [grpc_service_pb2_grpc.GRPCServiceStub(channel).StreamInfer(it)
                        for channel, it in zip(channels, request_its)]
-            for response in roundrobin(results):
+            for response in roundrobin(*results):
                 yield response
         finally:
             for channel in channels:

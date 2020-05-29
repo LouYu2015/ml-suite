@@ -10,8 +10,16 @@ import multiprocessing as mp
 from concurrent import futures
 import itertools
 
-ADDRESSES = ["127.0.0.1:{port}".format(port=port) for port in [5001, 5002]]
-PORT = 5000
+import argparse
+parser = argparse.ArgumentParser(description='Xilin ML Suit gRPC Inference Proxy')
+parser.add_argument("--address", metavar="<address>", type=str,
+                    help="Server address", default="localhost")
+parser.add_argument("-p", metavar="[<port>,...]", type=int, default=[5000], nargs="+",
+                    help="Server ports")
+args = parser.parse_args()
+
+ADDRESSES = ["{address}:{port}".format(port=port, address=args.address)
+             for port in args.port]
 
 
 def iterator_split(iterator, size):

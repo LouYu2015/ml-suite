@@ -82,10 +82,9 @@ def dummy_client(n, print_interval=50):
 
     start_time = time.time()
     # Connect to server
-    request = empty_image_generator(n)
 
-    # request iterators
-    request_its = iterator_split(request, len(ADDRESSES))
+    request_its = [empty_image_generator(n // len(ADDRESSES))
+                   for _ in range(len(ADDRESSES))]
     channels = [grpc.insecure_channel(address)
                 for address in ADDRESSES]
     try:

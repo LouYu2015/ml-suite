@@ -31,7 +31,6 @@ args = parser.parse_args()
 N_DUMMY_IMAGES = args.n
 BATCH_SIZE = args.batchsize
 SERVER_ADDRESS = args.address
-USE_STREAMING = args.stream
 ADDRESSES = ["{address}:{port}".format(address=SERVER_ADDRESS,
                                        port=port) for port in args.p]
 

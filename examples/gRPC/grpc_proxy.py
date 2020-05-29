@@ -21,7 +21,7 @@ parser.add_argument("-l", "--listen", metavar="<port>", type=int, default=5000,
 args = parser.parse_args()
 
 ADDRESSES = ["{address}:{port}".format(port=port, address=args.address)
-             for port in args.port]
+             for port in args.ports]
 PORT = args.l
 
 

@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 ADDRESSES = ["{address}:{port}".format(port=port, address=args.address)
              for port in args.ports]
-PORT = args.l
+PORT = args.listen
 
 
 def iterator_split(iterator, size):

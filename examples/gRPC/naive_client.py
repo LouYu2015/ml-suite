@@ -48,7 +48,7 @@ def empty_image_generator(n):
         yield request
 
 
-def dummy_client(n, print_interval=50):
+def dummy_client(n, print_interval=200):
     '''
     Start a dummy client
 

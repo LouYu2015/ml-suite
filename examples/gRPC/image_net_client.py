@@ -137,9 +137,10 @@ def imagenet_client(file_name, n, print_interval=50):
           .format(n=n,
                   time=total_time,
                   speed=float(n) / total_time))
-    labels = list(imagenet_label_generator(file_name, 490))
+    labels = imagenet_label_generator(file_name, 490)
     labels = itertools.cycle(labels)
     labels = itertools.islice(labels, n)
+    labels = list(labels)
     # print(predictions)
     # print(labels)
     predictions = np.array(predictions).reshape((-1))

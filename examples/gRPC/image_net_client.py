@@ -3,6 +3,8 @@ from __future__ import print_function
 import protos.grpc_service_pb2 as grpc_service_pb2
 import protos.grpc_service_pb2_grpc as grpc_service_pb2_grpc
 
+
+from sklearn import metrics
 import grpc
 import numpy as np
 import time
@@ -35,57 +37,111 @@ SERVER_PORT = args.p
 USE_STREAMING = args.stream
 
 
+def imagenet_image_generator(file_name, n):
+    import csv
+    import os
+    from PIL import Image
+    reader = csv.reader(open(os.path.expanduser(file_name), "r"), delimiter=" ")
+    for i, row in enumerate(reader):
+        if i >= n:
+            break
+        image_path = row[0]
+        file_name = os.path.expanduser(os.path.join(IMAGE_DIR, image_path))
+        image = Image.open(file_name)
+        image = image.resize((224, 224))
+        image = np.asarray(image)
+        if len(image.shape) == 2:
+            image = np.stack([image]*3, axis=2)
+        image = image - np.array([104.007, 116.669, 122.679])
+        # image = image/255
+        image = np.transpose(image, (2, 0, 1))
+        yield image
 
-def empty_image_generator(n):
-    '''
-    Generate empty images
 
-    n: number of images
-    '''
-    for _ in range(n // BATCH_SIZE):
-        request = grpc_service_pb2.InferRequest()
-        request.raw_input.append(np.zeros((BATCH_SIZE, 3, 224, 224), dtype=np.float32).tobytes())
-        yield request
+def imagenet_label_generator(file_name, n):
+    import csv
+    import os
+    reader = csv.reader(open(os.path.expanduser(file_name), "r"), delimiter=" ")
+    for i, row in enumerate(reader):
+        if i >= n:
+            break
+        label = row[1]
+        yield int(label)
 
 
-def dummy_client(n, print_interval=200):
-    '''
-    Start a dummy client
+def imagenet_request_generator(file_name, n):
+    try:
+        i = 0
+        data = []
+        for image in imagenet_image_generator(file_name, n):
+            data.append(image)
+            i += 1
 
-    n: number of images to send
-    print_interval: print a number after this number of images is done
-    '''
-    print("Dummy client sending {n} images...".format(n=n))
-    print("Batch size {batch}".format(batch=BATCH_SIZE))
+            if i == BATCH_SIZE:
+                request = request = grpc_service_pb2.InferRequest()
+                request.raw_input.append(np.array(data, dtype=np.float32).tobytes())
+                yield request
+
+                i = 0
+                data = []
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise e
+
+
+def imagenet_client(file_name, n, print_interval=50):
+    print("Sending {n} Imagenet images using batch size {batch_size}...".format(
+        n=n,
+        batch_size=BATCH_SIZE
+    ))
+
+    assert(n % BATCH_SIZE == 0)
 
     start_time = time.time()
+    requests = list(imagenet_request_generator(file_name, n))
+    total_time = time.time() - start_time
+    print("Image load time: {time:.2f}".format(time=total_time))
+    start_time = time.time()
+    predictions = []
     # Connect to server
     with grpc.insecure_channel('{address}:{port}'.format(address=SERVER_ADDRESS,
                                                          port=SERVER_PORT)) as channel:
         stub = grpc_service_pb2_grpc.GRPCServiceStub(channel)
 
-        stub.Status(grpc_service_pb2.StatusRequest())
-
         # Make a call
-        if USE_STREAMING:
-            # Streaming
-            print("Using streaming")
-            responses = stub.StreamInfer(empty_image_generator(n))
 
-            for i, responses in enumerate(responses):
-                if i % print_interval == 0:
-                    print(i)
+        if USE_STREAMING:
+            print("Using gRPC streaming")
+            def it():
+                for request in requests:
+                    yield request
+            responses = stub.StreamInfer(it())
         else:
-            # Not streaming
-            print("Not using streaming")
-            for i in range(n // BATCH_SIZE):
-                responses = stub.Infer(list(empty_image_generator(BATCH_SIZE))[0])
+            print("Not using gRPC streaming")
+            responses = [stub.Infer(request) for request in requests]
+
+        # Get responses
+        for i, response in enumerate(responses):
+            if i % print_interval == 0:
+                print(i)
+            response = np.frombuffer(response.raw_output[0], dtype=np.float32).reshape((-1, 1000))
+            prediction = np.argmax(response, axis=1)
+            predictions.append(prediction)
     total_time = time.time() - start_time
-    print("{n} images in {time:.1f} seconds ({speed:.1f} images/s)"
+    print("Sent {n} images in {time:.3f} seconds ({speed:.3f} images/s), excluding image load time"
           .format(n=n,
                   time=total_time,
                   speed=float(n) / total_time))
+    labels = list(imagenet_label_generator(file_name, n))
+    # print(predictions)
+    # print(labels)
+    predictions = np.array(predictions).reshape((-1))
+    labels = np.array(labels).reshape((-1))
+    # print(predictions)
+    # print(labels)
+    print("Accuracy: {acc:.4}".format(acc=metrics.accuracy_score(labels, predictions)))
 
 
 if __name__ == '__main__':
-    dummy_client(N_DUMMY_IMAGES)
+    imagenet_client(IMAGE_LIST, N_DUMMY_IMAGES)

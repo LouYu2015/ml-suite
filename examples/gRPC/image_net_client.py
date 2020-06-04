@@ -8,6 +8,7 @@ from sklearn import metrics
 import grpc
 import numpy as np
 import time
+import itertools
 
 # Number of dummy images to send
 INPUT_NODE_NAME = "data"
@@ -73,7 +74,10 @@ def imagenet_request_generator(file_name, n):
     try:
         i = 0
         data = []
-        for image in imagenet_image_generator(file_name, n):
+        images = imagenet_image_generator(file_name, 490)
+        images = itertools.repeat(images)
+        images = itertools.islice(images, n)
+        for image in images:
             data.append(image)
             i += 1
 

@@ -75,14 +75,14 @@ def imagenet_request_generator(file_name, n):
         i = 0
         data = []
         images = imagenet_image_generator(file_name, 490)
-        images = itertools.repeat(images)
+        images = itertools.cycle(images)
         images = itertools.islice(images, n)
         for image in images:
             data.append(image)
             i += 1
 
             if i == BATCH_SIZE:
-                request = request = grpc_service_pb2.InferRequest()
+                request = grpc_service_pb2.InferRequest()
                 request.raw_input.append(np.array(data, dtype=np.float32).tobytes())
                 yield request
 

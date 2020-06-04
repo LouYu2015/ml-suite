@@ -55,7 +55,7 @@ def dummy_client(n, print_interval=200):
     n: number of images to send
     print_interval: print a number after this number of images is done
     '''
-    print("Dummy client sending {n} images...".format(n=n))
+    print("Naive client sending {n} dummy images...".format(n=n))
     print("Batch size {batch}".format(batch=BATCH_SIZE))
 
     start_time = time.time()
@@ -79,6 +79,8 @@ def dummy_client(n, print_interval=200):
             # Not streaming
             print("Not using streaming")
             for i in range(n // BATCH_SIZE):
+                if i % print_interval == 0:
+                    print(i)
                 responses = stub.Infer(list(empty_image_generator(BATCH_SIZE))[0])
     total_time = time.time() - start_time
     print("{n} images in {time:.1f} seconds ({speed:.1f} images/s)"

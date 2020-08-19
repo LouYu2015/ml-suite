@@ -1,5 +1,7 @@
 # A gRPC Inference Server
 
+For SONIC support, please checkout branch [`sonic-grpc`](https://github.com/LouYu2015/ml-suite/tree/sonic-grpc/examples/gRPC).
+
 To start the server in the docker image:
 
 * Run `scripts/server_setup.sh` to quantize the model and install gRPC
